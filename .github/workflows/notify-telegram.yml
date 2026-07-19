@@ -5,15 +5,17 @@ on:
     branches: [main, master]
   pull_request:
     types: [closed]
+  workflow_dispatch:
 
 jobs:
   notify:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     steps:
       - name: Send update to Telegram topic
         env:
-          NOTIFY_BOT_TOKEN: ${{ secrets.TELEGRAM_NOTIFY_BOT_TOKEN }}
+          NOTIFY_TOKEN_PRIMARY: ${{ secrets.TELEGRAM_NOTIFY_BOT_TOKEN }}
+          NOTIFY_TOKEN_FALLBACK: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
           EVENT_NAME: ${{ github.event_name }}
@@ -29,18 +31,45 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          export NOTIFY_BOT_TOKEN="${NOTIFY_TOKEN_PRIMARY:-$NOTIFY_TOKEN_FALLBACK}"
           if [ -z "$NOTIFY_BOT_TOKEN" ] || [ -z "$CHAT_ID" ] || [ -z "$TOPIC_ID" ]; then
-            echo "Telegram notify secrets not configured. Skipping notification."
-            exit 0
+            echo "::error::Set TELEGRAM_NOTIFY_BOT_TOKEN (or TELEGRAM_BOT_TOKEN), TELEGRAM_CHAT_ID, TELEGRAM_TOPIC_ID"
+            exit 1
           fi
-
-          SHORT_SHA="${COMMIT_SHA:0:7}"
-
           python3 <<'PY'
           import html
           import json
           import os
+          import sys
+          import urllib.error
           import urllib.request
+
+          TOKEN = os.environ["NOTIFY_BOT_TOKEN"]
+          CHAT_ID = os.environ["CHAT_ID"]
+          TOPIC_ID = int(os.environ["TOPIC_ID"])
+          API = f"https://api.telegram.org/bot{TOKEN}"
+
+          def call(method, payload):
+              req = urllib.request.Request(
+                  f"{API}/{method}",
+                  data=json.dumps(payload).encode("utf-8"),
+                  headers={"Content-Type": "application/json"},
+                  method="POST",
+              )
+              try:
+                  with urllib.request.urlopen(req) as resp:
+                      result = json.loads(resp.read().decode("utf-8"))
+              except urllib.error.HTTPError as e:
+                  body = e.read().decode("utf-8", errors="replace")
+                  print(f"Telegram API HTTP {e.code}: {body}", file=sys.stderr)
+                  raise
+              if not result.get("ok"):
+                  print(f"Telegram API error: {result}", file=sys.stderr)
+                  raise RuntimeError(result)
+              return result
+
+          me = call("getMe", {})
+          print(f"Notify bot: @{me['result'].get('username', '?')}")
 
           event = os.environ["EVENT_NAME"]
           repo = html.escape(os.environ["REPO"])
@@ -48,12 +77,12 @@ jobs:
           actor = html.escape(os.environ["ACTOR"])
           run_url = os.environ["RUN_URL"]
 
-          if event == "push":
+          if event in ("push", "workflow_dispatch"):
               short_sha = os.environ["COMMIT_SHA"][:7]
               commit_url = os.environ.get("COMMIT_URL") or run_url
-              commit_msg = html.escape((os.environ.get("COMMIT_MSG") or "No commit message").splitlines()[0])
+              commit_msg = html.escape((os.environ.get("COMMIT_MSG") or "Manual test / push").splitlines()[0])
               author = html.escape(os.environ.get("COMMIT_AUTHOR") or actor)
-              title = "Bot updated (push)"
+              title = "Bot updated (push)" if event == "push" else "Bot update test"
               body = (
                   f"<b>Repo:</b> {repo}\n"
                   f"<b>Branch:</b> {branch}\n"
@@ -77,23 +106,19 @@ jobs:
           text = f"🔄 <b>{title}</b>\n\n{body}\n\n<a href=\"{html.escape(run_url)}\">View GitHub Action</a>"
 
           payload = {
-              "chat_id": os.environ["CHAT_ID"],
-              "message_thread_id": int(os.environ["TOPIC_ID"]),
+              "chat_id": CHAT_ID,
+              "message_thread_id": TOPIC_ID,
               "parse_mode": "HTML",
               "text": text,
               "disable_web_page_preview": True,
           }
 
-          req = urllib.request.Request(
-              f"https://api.telegram.org/bot{os.environ['NOTIFY_BOT_TOKEN']}/sendMessage",
-              data=json.dumps(payload).encode("utf-8"),
-              headers={"Content-Type": "application/json"},
-              method="POST",
-          )
+          try:
+              result = call("sendMessage", payload)
+          except Exception as topic_err:
+              print(f"Topic send failed, retrying without topic: {topic_err}", file=sys.stderr)
+              payload.pop("message_thread_id", None)
+              result = call("sendMessage", payload)
 
-          with urllib.request.urlopen(req) as resp:
-              result = json.loads(resp.read().decode("utf-8"))
-              if not result.get("ok"):
-                  raise RuntimeError(result)
-              print("Telegram notification sent.")
+          print(f"Telegram notification sent. message_id={result['result']['message_id']}")
           PY

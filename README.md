@@ -82,7 +82,15 @@ Notifications run automatically on:
 - **Push** to `main` / `master`
 - **Merged pull request**
 
-If secrets are missing, the workflow skips silently (no failure).
+If secrets are missing, the workflow **fails** with a clear error (after you push the latest workflow update).
+
+### Test locally before GitHub
+
+```bash
+npm run test:notify
+```
+
+Uses `BOT_TOKEN` from `.env` by default. Override with `CHAT_ID` and `TOPIC_ID` if needed.
 
 ## Data storage
 
