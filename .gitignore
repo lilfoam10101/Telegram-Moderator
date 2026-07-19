@@ -1,0 +1,15 @@
+node_modules/
+data/
+.env
+
+# Python leftovers
+__pycache__/
+*.py
+*.pyc
+handlers/
+api/
+
+# IDE / OS
+.cursor/
+.DS_Store
+Thumbs.db
