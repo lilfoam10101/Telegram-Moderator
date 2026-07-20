@@ -10,6 +10,7 @@ export const BOT_COMMANDS = [
 
 export const GROUP_COMMANDS = [
   { command: "help", description: "Show group command list" },
+  { command: "stocks", description: "US watchlist prices" },
   { command: "filter", description: "Set auto-reply trigger" },
   { command: "unfilter", description: "Remove auto-reply trigger" },
   { command: "filters", description: "List auto-reply triggers" },
@@ -22,7 +23,6 @@ export const GROUP_COMMANDS = [
   { command: "welcome", description: "Show welcome message settings" },
   { command: "unwelcome", description: "Disable welcome message" },
   { command: "myid", description: "Show your Telegram user ID" },
-  { command: "stocks", description: "US watchlist prices" },
 ];
 
 export const GROUP_HELP_TEXT =
@@ -49,13 +49,20 @@ function isGroupOrChannel(ctx) {
   return type === "group" || type === "supergroup" || type === "channel";
 }
 
+async function setCommandsForScope(telegram, commands, scope) {
+  try {
+    await telegram.deleteMyCommands({ scope });
+  } catch {
+    // scope may not exist yet
+  }
+  await telegram.setMyCommands(commands, { scope });
+}
+
 export async function registerGroupCommandsForChat(telegram, chatId) {
-  await telegram.setMyCommands(GROUP_COMMANDS, {
-    scope: { type: "chat", chat_id: chatId },
-  });
-  await telegram.setMyCommands(GROUP_COMMANDS, {
-    scope: { type: "chat_administrators", chat_id: chatId },
-  });
+  const chatScope = { type: "chat", chat_id: chatId };
+  const adminScope = { type: "chat_administrators", chat_id: chatId };
+  await setCommandsForScope(telegram, GROUP_COMMANDS, chatScope);
+  await setCommandsForScope(telegram, GROUP_COMMANDS, adminScope);
 }
 
 function collectCommandChatIds() {
@@ -84,12 +91,10 @@ export async function registerBotCommands(telegram) {
   ];
 
   for (const scope of groupScopes) {
-    await telegram.setMyCommands(GROUP_COMMANDS, { scope });
+    await setCommandsForScope(telegram, GROUP_COMMANDS, scope);
   }
 
-  await telegram.setMyCommands(BOT_COMMANDS, {
-    scope: { type: "all_private_chats" },
-  });
+  await setCommandsForScope(telegram, BOT_COMMANDS, { type: "all_private_chats" });
 
   await registerAllKnownGroupCommands(telegram);
 
@@ -99,6 +104,7 @@ export async function registerBotCommands(telegram) {
 
 async function handleGroupHelp(ctx) {
   if (!isGroupOrChannel(ctx)) return;
+  await registerGroupCommandsForChat(ctx.telegram, ctx.chat.id).catch(() => {});
   await ctx.reply(GROUP_HELP_TEXT, { parse_mode: "MarkdownV2" });
 }
 

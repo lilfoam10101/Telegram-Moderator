@@ -44,9 +44,11 @@ export function createBot() {
       refreshChatStatus(ctx.telegram, ctx.chat.id).catch(() => {});
       if (!commandsSynced.has(ctx.chat.id)) {
         commandsSynced.add(ctx.chat.id);
-        registerGroupCommandsForChat(ctx.telegram, ctx.chat.id).catch((err) => {
-          console.warn(`Command sync failed for ${ctx.chat.id}:`, err.message);
-        });
+        registerGroupCommandsForChat(ctx.telegram, ctx.chat.id)
+          .then(() => console.log(`Commands synced for chat ${ctx.chat.id}`))
+          .catch((err) => {
+            console.warn(`Command sync failed for ${ctx.chat.id}:`, err.message);
+          });
       }
     }
     if (msg) rememberMessageUser(ctx.chat.id, msg);
