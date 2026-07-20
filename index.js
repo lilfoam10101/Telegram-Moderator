@@ -1,12 +1,12 @@
 import "dotenv/config";
-import { BOT_TOKEN } from "./src/config.js";
+import { BOT_TOKEN, KNOWN_CHAT_IDS } from "./src/config.js";
 import { registerBotCommands } from "./src/commands.js";
 import { createBot } from "./src/bot.js";
 import { storage } from "./src/storage.js";
 import { topicDiscovery } from "./src/topicDiscovery.js";
 import { seedAllKnownChats } from "./src/userRegistry.js";
 import { refreshModeratedMembers, moderatedStore } from "./src/moderatedStore.js";
-import { chatRegistry } from "./src/chatRegistry.js";
+import { chatRegistry, refreshChatStatus } from "./src/chatRegistry.js";
 
 if (!BOT_TOKEN) {
   console.error("BOT_TOKEN is not set.");
@@ -21,6 +21,12 @@ for (const topic of storage.listAllTopics()) {
 }
 
 const bot = createBot();
+
+for (const chatId of KNOWN_CHAT_IDS) {
+  await refreshChatStatus(bot.telegram, chatId).catch((err) => {
+    console.warn(`Could not refresh known chat ${chatId}:`, err.message);
+  });
+}
 
 await registerBotCommands(bot.telegram);
 await seedAllKnownChats(bot.telegram);

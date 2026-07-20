@@ -10,6 +10,7 @@ import { registerWelcomeHandlers, handleNewChatMembers, handleChatMemberJoin } f
 import { discoverTopicFromMessage } from "./topicDiscovery.js";
 import { rememberMessageUser, rememberChatMember } from "./userRegistry.js";
 import { moderatedStore } from "./moderatedStore.js";
+import { refreshChatStatus } from "./chatRegistry.js";
 
 export function createBot() {
   if (!BOT_TOKEN) {
@@ -24,6 +25,9 @@ export function createBot() {
 
   bot.use(async (ctx, next) => {
     if (ctx.chat?.type === "private") return next();
+    if (ctx.chat?.id) {
+      refreshChatStatus(ctx.telegram, ctx.chat.id).catch(() => {});
+    }
     const msg = ctx.message || ctx.channelPost;
     if (msg) rememberMessageUser(ctx.chat.id, msg);
     const chat = ctx.chat?.title || ctx.chat?.username || ctx.chat?.id || "unknown";

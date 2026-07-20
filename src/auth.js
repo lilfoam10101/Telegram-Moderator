@@ -1,4 +1,5 @@
-import { chatRegistry } from "./chatRegistry.js";
+import { ADMIN_IDS } from "./config.js";
+import { collectKnownChatIds } from "./knownChats.js";
 
 export async function isGroupAdmin(telegram, chatId, userId) {
   if (userId == null) return false;
@@ -28,8 +29,8 @@ export async function isGroupAdmin(telegram, chatId, userId) {
 export async function isAdminInAnyChat(telegram, userId) {
   if (userId == null) return false;
 
-  for (const chat of chatRegistry.list()) {
-    if (await isGroupAdmin(telegram, chat.chatId, userId)) return true;
+  for (const chatId of collectKnownChatIds()) {
+    if (await isGroupAdmin(telegram, chatId, userId)) return true;
   }
   return false;
 }

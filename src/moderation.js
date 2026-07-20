@@ -7,6 +7,7 @@ import { isGroupAdmin, isAdminInAnyChat } from "./auth.js";
 export const DEFAULT_PURPOSE = "This topic is for admins only.";
 
 export async function canUseBot(telegram, userId) {
+  if (userId != null && ADMIN_IDS.has(Number(userId))) return true;
   return isAdminInAnyChat(telegram, userId);
 }
 

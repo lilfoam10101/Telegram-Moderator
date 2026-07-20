@@ -52,7 +52,11 @@ export const GUIDE_TEXT =
   "You can also forward a message from a topic\\.";
 
 function unauthorized(ctx) {
-  return ctx.reply("⛔ Only group admins can use this bot.\n\nAdd the bot to your group and make it admin first.");
+  return ctx.reply(
+    "⛔ DM setup is for group admins only.\n\n" +
+      "If you are an admin, set KNOWN_CHAT_IDS on the server (your group chat ID) " +
+      "or send any message in the group first, then try /start here again."
+  );
 }
 
 async function guardPrivateAdmin(ctx) {
