@@ -1,4 +1,4 @@
-# Telegram Topic Moderator.
+# Telegram Topic Moderator..
 
 Node.js Telegram bot for forum topic moderation, auto-reply filters, member actions, and welcome messages.
 
