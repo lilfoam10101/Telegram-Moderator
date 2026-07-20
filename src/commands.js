@@ -20,6 +20,7 @@ export const GROUP_COMMANDS = [
   { command: "welcome", description: "Show welcome message settings" },
   { command: "unwelcome", description: "Disable welcome message" },
   { command: "myid", description: "Show your Telegram user ID" },
+  { command: "stocks", description: "US watchlist prices (AAPL, MSFT, …)" },
 ];
 
 export const GROUP_HELP_TEXT =
@@ -36,7 +37,8 @@ export const GROUP_HELP_TEXT =
   "`/setwelcome <message>` — Set new member welcome\n" +
   "`/welcome` — Show welcome settings\n" +
   "`/unwelcome` — Disable welcome message\n" +
-  "`/myid` — Show your Telegram user ID\n\n" +
+  "`/myid` — Show your Telegram user ID\n" +
+  "`/stocks` — US watchlist prices \\(AAPL, MSFT, AMZN, META, QQQ, SPY\\)\n\n" +
   "_Welcome placeholders: {name} {username} {mention} {group}_\n\n" +
   "_Filter and moderation commands require group admin\\._";
 

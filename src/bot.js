@@ -7,6 +7,7 @@ import { registerFilterHandlers, handleFilterTrigger } from "./filters.js";
 import { registerMemberActionHandlers } from "./memberActions.js";
 import { registerGroupHelpHandler } from "./commands.js";
 import { registerWelcomeHandlers, handleNewChatMembers, handleChatMemberJoin } from "./welcome.js";
+import { registerStocksHandlers } from "./stocks.js";
 import { discoverTopicFromMessage } from "./topicDiscovery.js";
 import { rememberMessageUser, rememberChatMember } from "./userRegistry.js";
 import { moderatedStore } from "./moderatedStore.js";
@@ -54,6 +55,7 @@ export function createBot() {
   registerFilterHandlers(bot);
   registerMemberActionHandlers(bot);
   registerWelcomeHandlers(bot);
+  registerStocksHandlers(bot);
 
   bot.on("chat_member", async (ctx) => {
     if (ctx.chat?.type === "private") return;
